@@ -70,7 +70,7 @@ func New(p machine.Pin, outs ...chan PressLength) (Bouncer, error) {
 		longPress:      500 * time.Millisecond,
 		extraLongPress: 1971 * time.Millisecond,
 		tickerCh:       make(chan struct{}, 1),
-		isrChan:        make(chan bool, 1),
+		isrChan:        make(chan bool, 3), // Buffer interrupts during rapid bouncing
 		outChans:       outChans,
 	}, nil
 }
@@ -79,7 +79,10 @@ func New(p machine.Pin, outs ...chan PressLength) (Bouncer, error) {
 func (b *bouncer) Configure(cfg Config) error {
 	b.pin.Configure(machine.PinConfig{Mode: machine.PinInputPullup})
 	err := b.pin.SetInterrupt(machine.PinFalling|machine.PinRising, func(machine.Pin) {
-		b.isrChan <- b.pin.Get()
+		select {
+		case b.isrChan <- b.pin.Get():
+		default:
+		}
 	})
 	if err != nil {
 		return err
