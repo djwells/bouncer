@@ -163,9 +163,10 @@ func (b *bouncer) Duration(l PressLength) time.Duration {
 // publish concurrently sends a PressLength to all channels subscribed to this Bouncer
 func (b *bouncer) publish(p PressLength) {
 	for i := range b.outChans {
-		go func(i int) {
-			b.outChans[i] <- p
-		}(i)
+		select {
+		case b.outChans[i] <- p:
+		default:
+		}
 	}
 }
 
